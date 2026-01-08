@@ -1,6 +1,7 @@
 /**
  * Business Routes
  * Handles all business-related API endpoints
+ * Features advanced local business filtering algorithm
  */
 
 const express = require('express');
@@ -8,6 +9,7 @@ const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const { v4: uuidv4 } = require('uuid');
 const { DB_PATH } = require('../database/init');
+const { filterLocalBusinesses, analyzeBusinessClassification } = require('../services/localBusinessAlgorithm');
 
 const db = new sqlite3.Database(DB_PATH);
 
@@ -90,7 +92,13 @@ router.get('/', (req, res) => {
       reviewCount: parseInt(business.reviewCount)
     }));
 
-    res.json(formattedBusinesses);
+    // ✨ APPLY LOCAL BUSINESS ALGORITHM ✨
+    // Filter out corporate chains and only show small, local businesses
+    const localBusinesses = filterLocalBusinesses(formattedBusinesses);
+    
+    console.log(`🏪 Filtered: ${businesses.length} total → ${localBusinesses.length} local businesses`);
+
+    res.json(localBusinesses);
   });
 });
 
@@ -227,6 +235,65 @@ router.post('/', (req, res) => {
       });
     }
   );
+});
+
+/**
+ * GET /api/businesses/algorithm/analysis
+ * Debug endpoint: Shows how the local business algorithm scored each business
+ * Useful for demonstrating the algorithm during competition presentation
+ */
+router.get('/algorithm/analysis', (req, res) => {
+  const query = `
+    SELECT
+      b.*,
+      COALESCE(AVG(r.rating), 0) as averageRating,
+      COUNT(DISTINCT r.id) as reviewCount
+    FROM businesses b
+    LEFT JOIN reviews r ON b.id = r.business_id
+    GROUP BY b.id
+    ORDER BY b.name ASC
+  `;
+
+  db.all(query, [], (err, businesses) => {
+    if (err) {
+      console.error('Error fetching businesses for analysis:', err);
+      return res.status(500).json({ error: 'Failed to analyze businesses' });
+    }
+
+    const formattedBusinesses = businesses.map(business => ({
+      ...business,
+      hours: JSON.parse(business.hours),
+      averageRating: parseFloat(business.averageRating.toFixed(1)),
+      reviewCount: parseInt(business.reviewCount)
+    }));
+
+    // Analyze each business
+    const analysis = formattedBusinesses.map(business => 
+      analyzeBusinessClassification(business)
+    );
+
+    const summary = {
+      totalBusinesses: analysis.length,
+      localBusinesses: analysis.filter(a => a.classification.includes('LOCAL')).length,
+      chains: analysis.filter(a => a.classification.includes('CHAIN')).length,
+      averageScore: Math.round(analysis.reduce((sum, a) => sum + a.scores.overall, 0) / analysis.length)
+    };
+
+    res.json({
+      summary,
+      algorithm: {
+        name: 'Local Business Authenticity Index (LBAI)',
+        description: 'Advanced composite scoring system to identify small, local businesses',
+        components: {
+          chainDetection: '50% weight - Identifies corporate chains',
+          businessSize: '30% weight - Analyzes business scale',
+          localityScore: '20% weight - Measures community integration'
+        },
+        threshold: 'Businesses must score ≥60 to be classified as local'
+      },
+      businessAnalysis: analysis
+    });
+  });
 });
 
 module.exports = router;
