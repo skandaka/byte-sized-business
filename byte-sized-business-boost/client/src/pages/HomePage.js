@@ -6,9 +6,27 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useBusiness } from '../contexts/BusinessContext';
+import EmptyState from '../components/EmptyState';
+import SearchBar from '../components/SearchBar';
+import { ListSkeleton } from '../components/LoadingSkeleton';
+import SafeImage from '../components/SafeImage';
+import LocationPicker from '../components/LocationPicker';
 
 function HomePage() {
-  const { businesses, loading, selectedCategory, setSelectedCategory, sortBy, setSortBy } = useBusiness();
+  const {
+    businesses,
+    loading,
+    selectedCategory,
+    setSelectedCategory,
+    sortBy,
+    setSortBy,
+    searchQuery,
+    setSearchQuery,
+    includeExternal,
+    setIncludeExternal,
+    location,
+    setLocation,
+  } = useBusiness();
 
   const categories = ['All', 'Food', 'Retail', 'Services', 'Entertainment', 'Health', 'Other'];
   const sortOptions = [
@@ -19,14 +37,8 @@ function HomePage() {
     { value: 'a-z', label: 'A-Z' },
   ];
 
-  if (loading) {
-    return (
-      <div className="container mt-4 text-center">
-        <div className="spinner" style={{ margin: '0 auto' }}></div>
-        <p className="mt-2">Loading businesses...</p>
-      </div>
-    );
-  }
+  // Show skeleton on initial load
+  const showSkeleton = loading && businesses.length === 0;
 
   return (
     <div className="container mt-4">
@@ -40,8 +52,26 @@ function HomePage() {
         </p>
       </section>
 
-      {/* Category Filter */}
+      {/* Location Picker */}
       <section className="mb-3">
+        <LocationPicker
+          currentLocation={location}
+          onLocationChange={setLocation}
+        />
+      </section>
+
+      {/* Search Bar */}
+      <section className="mb-4">
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          resultCount={businesses.length}
+          isSearching={loading}
+        />
+      </section>
+
+      {/* Category Filter */}
+      <section className="mb-3" data-reveal>
         <h3 className="mb-2">Browse by Category</h3>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {categories.map((category) => (
@@ -82,17 +112,33 @@ function HomePage() {
             ))}
           </select>
         </div>
+        <label className="flex items-center gap-1" style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={includeExternal}
+            onChange={(e) => setIncludeExternal(e.target.checked)}
+            style={{ width: '18px', height: '18px' }}
+          />
+          Include partner picks (Yelp/Google)
+        </label>
       </section>
 
       {/* Business Grid */}
       <section>
-        {businesses.length === 0 ? (
-          <div className="card text-center p-4">
-            <h3>No businesses found</h3>
-            <p className="mt-2">Try selecting a different category.</p>
-          </div>
+        {showSkeleton ? (
+          <ListSkeleton count={6} type="business" />
+        ) : businesses.length === 0 ? (
+          <EmptyState
+            icon="🔍"
+            title={`No businesses found in ${selectedCategory === 'All' ? 'any category' : selectedCategory}`}
+            message={selectedCategory === 'All'
+              ? "There are no businesses available at the moment. Please check back soon!"
+              : `Try selecting "All" or a different category to discover more local businesses.`}
+            actionText="View All Categories"
+            actionOnClick={() => setSelectedCategory('All')}
+          />
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3" data-reveal>
             {businesses.map((business) => (
               <Link
                 key={business.id}
@@ -100,34 +146,42 @@ function HomePage() {
                 style={{ textDecoration: 'none', color: 'inherit' }}
               >
                 <div className="card" style={{ height: '100%', cursor: 'pointer' }}>
-                  {/* Business Image */}
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '200px',
-                      background: `url(${business.image_url}) center/cover`,
-                      borderRadius: 'var(--radius-md)',
-                      marginBottom: '1rem'
-                    }}
-                    role="img"
-                    aria-label={business.name}
+                  <SafeImage
+                    src={business.image_url}
+                    alt={business.name}
+                    category={business.category}
+                    businessName={business.name}
+                    height={200}
+                    style={{ marginBottom: '1rem' }}
                   />
 
                   {/* Business Info */}
                   <div>
                     <div className="flex justify-between items-start mb-1">
-                      <h3 style={{ margin: 0 }}>{business.name}</h3>
+                      <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>{business.name}</h3>
                       <span
                         className="text-sm"
                         style={{
-                          background: 'var(--primary-blue)',
-                          color: 'white',
+                          background: {
+                            'Food': 'var(--success-green)',
+                            'Retail': 'var(--primary-blue)',
+                            'Services': '#9b59b6',
+                            'Entertainment': 'var(--warning-yellow)',
+                            'Health': '#e74c3c',
+                            'Other': 'var(--text-tertiary)'
+                          }[business.category] || 'var(--primary-blue)',
+                          color: business.category === 'Entertainment' ? '#333' : 'white',
                           padding: '0.25rem 0.5rem',
                           borderRadius: 'var(--radius-sm)'
                         }}
                       >
                         {business.category}
                       </span>
+                      {business.isExternal && (
+                        <span className="text-sm" style={{ color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>
+                          Partner
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-sm" style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
@@ -139,7 +193,7 @@ function HomePage() {
                       <span style={{ color: 'var(--warning-yellow)', fontSize: '1.2rem' }}>
                         {'⭐'.repeat(Math.round(business.averageRating))}
                       </span>
-                      <span style={{ fontWeight: 'bold' }}>{business.averageRating}</span>
+                      <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{business.averageRating}</span>
                       <span style={{ color: 'var(--text-tertiary)' }}>
                         ({business.reviewCount} reviews)
                       </span>
@@ -148,7 +202,61 @@ function HomePage() {
                     {/* Address */}
                     <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>
                       📍 {business.address.split(',')[0]}
+                      {business.distance && (
+                        <span style={{ marginLeft: '0.5rem', fontWeight: 'bold', color: 'var(--primary-blue)' }}>
+                          ({business.distance.toFixed(1)} mi)
+                        </span>
+                      )}
                     </p>
+
+                    {business.deliveryOptions && business.deliveryOptions.length > 0 && (
+                      <div className="flex gap-1 mt-1" style={{ flexWrap: 'wrap' }}>
+                        {business.deliveryOptions.slice(0, 3).map((svc) =>
+                          svc.link ? (
+                            <a
+                              key={`${business.id}-${svc.name}`}
+                              href={svc.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                background: 'var(--bg-tertiary)',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '999px',
+                                color: 'var(--text-secondary)',
+                                textDecoration: 'none',
+                                display: 'inline-block',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.background = 'var(--primary-blue)';
+                                e.target.style.color = 'white';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.background = 'var(--bg-tertiary)';
+                                e.target.style.color = 'var(--text-secondary)';
+                              }}
+                            >
+                              {svc.name} ↗
+                            </a>
+                          ) : (
+                            <span
+                              key={`${business.id}-${svc.name}`}
+                              className="text-sm"
+                              style={{
+                                background: 'var(--bg-tertiary)',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '999px',
+                                color: 'var(--text-secondary)'
+                              }}
+                            >
+                              {svc.name}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>

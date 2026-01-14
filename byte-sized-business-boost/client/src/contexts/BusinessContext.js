@@ -37,6 +37,15 @@ export function BusinessProvider({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('highest-rated');
   const [minRating, setMinRating] = useState(0);
+  const [includeExternal, setIncludeExternal] = useState(true);
+  
+  // Default to Chicago location for live business search with real photos
+  const [location, setLocation] = useState({
+    lat: 41.8781,
+    lng: -87.6298,
+    name: 'Chicago, IL',
+    radius: 10
+  });
 
   /**
    * Fetch businesses with current filters
@@ -51,9 +60,12 @@ export function BusinessProvider({ children }) {
         search: searchQuery,
         sort: sortBy,
         minRating: minRating > 0 ? minRating : undefined,
+        lat: location?.lat,
+        lng: location?.lng,
+        radius: location?.radius,
       };
 
-      const data = await getBusinesses(filters);
+      const data = await getBusinesses(filters, includeExternal);
       setBusinesses(data);
     } catch (err) {
       console.error('Error fetching businesses:', err);
@@ -83,7 +95,7 @@ export function BusinessProvider({ children }) {
   // Fetch businesses when filters change
   useEffect(() => {
     fetchBusinesses();
-  }, [selectedCategory, searchQuery, sortBy, minRating]);
+  }, [selectedCategory, searchQuery, sortBy, minRating, includeExternal, location]);
 
   // Fetch favorites when user changes
   useEffect(() => {
@@ -122,6 +134,10 @@ export function BusinessProvider({ children }) {
     setSortBy,
     minRating,
     setMinRating,
+    includeExternal,
+    setIncludeExternal,
+    location,
+    setLocation,
     fetchBusinesses,
     fetchFavorites,
     isFavorited,

@@ -10,7 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 function Navbar() {
   const { user, logout } = useAuth();
-  const { darkMode, toggleDarkMode } = useTheme();
+  const { darkMode, toggleDarkMode, highContrast, toggleHighContrast } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -61,11 +61,11 @@ function Navbar() {
             <Link to="/" style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 500 }}>
               Home
             </Link>
-            <Link to="/deals" style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 500 }}>
-              Deals
+            <Link to="/discover" style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 500 }}>
+              Discover
             </Link>
-            <Link to="/analytics" style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 500 }}>
-              Analytics
+            <Link to="/map" style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 500 }}>
+              Map
             </Link>
 
             {user ? (
@@ -102,6 +102,16 @@ function Navbar() {
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {darkMode ? '☀️' : '🌙'}
+            </button>
+
+            {/* High contrast toggle */}
+            <button
+              onClick={toggleHighContrast}
+              className="btn btn-secondary"
+              aria-label={highContrast ? 'Disable high contrast' : 'Enable high contrast'}
+              title={highContrast ? 'Disable high contrast' : 'Enable high contrast'}
+            >
+              {highContrast ? '👁️' : '🎨'}
             </button>
           </div>
         </div>

@@ -5,20 +5,26 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getBusinessById, getReviews, addFavorite, removeFavorite, checkFavorite } from '../utils/api';
+import { getBusinessById, getReviews, addFavorite, removeFavorite, checkFavorite, getBusinessDeals } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import StarRating from '../components/StarRating';
 import ReviewList from '../components/ReviewList';
 import ReviewForm from '../components/ReviewForm';
+import SafeImage from '../components/SafeImage';
+import BusinessPairings from '../components/BusinessPairings';
 
 function BusinessDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [deals, setDeals] = useState([]);
+  const [deliveryLinks, setDeliveryLinks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dealsLoading, setDealsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeTab, setActiveTab] = useState('about');
+  const isExternal = business?.isExternal;
 
   useEffect(() => {
     fetchBusinessData();
@@ -28,6 +34,13 @@ function BusinessDetailPage() {
     }
   }, [id, user]);
 
+  // Fetch deals when business data is available
+  useEffect(() => {
+    if (business) {
+      fetchDeals();
+    }
+  }, [business]);
+
   const fetchBusinessData = async () => {
     try {
       const data = await getBusinessById(id);
@@ -36,6 +49,27 @@ function BusinessDetailPage() {
       console.error('Error fetching business:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDeals = async () => {
+    try {
+      setDealsLoading(true);
+      const data = await getBusinessDeals(id, {
+        name: business.name,
+        category: business.category,
+        description: business.description,
+        address: business.address
+      });
+      
+      setDeals(data.deals || []);
+      setDeliveryLinks(data.deliveryLinks || []);
+    } catch (error) {
+      console.error('Error fetching deals:', error);
+      setDeals([]);
+      setDeliveryLinks([]);
+    } finally {
+      setDealsLoading(false);
     }
   };
 
@@ -58,6 +92,11 @@ function BusinessDetailPage() {
   };
 
   const handleFavoriteToggle = async () => {
+    if (isExternal) {
+      alert('External listings cannot be favorited.');
+      return;
+    }
+
     if (!user) {
       alert('Please log in to save favorites');
       return;
@@ -118,16 +157,14 @@ function BusinessDetailPage() {
       <div className="card p-4 mb-3">
         <div className="flex" style={{ gap: '2rem', flexWrap: 'wrap' }}>
           {/* Business Image */}
-          <div
-            style={{
-              width: '300px',
-              height: '300px',
-              background: `url(${business.image_url}) center/cover`,
-              borderRadius: 'var(--radius-lg)',
-              flexShrink: 0,
-            }}
-            role="img"
-            aria-label={business.name}
+          <SafeImage
+            src={business.image_url}
+            alt={business.name}
+            category={business.category}
+            businessName={business.name}
+            height={300}
+            width="300px"
+            style={{ borderRadius: 'var(--radius-lg)', flexShrink: 0 }}
           />
 
           {/* Business Info */}
@@ -157,8 +194,12 @@ function BusinessDetailPage() {
                   background: isFavorited ? 'var(--error-red)' : 'var(--bg-tertiary)',
                   color: isFavorited ? 'white' : 'var(--text-primary)',
                   fontSize: '1.5rem',
+                  opacity: isExternal ? 0.6 : 1,
+                  cursor: isExternal ? 'not-allowed' : 'pointer'
                 }}
                 aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                disabled={isExternal}
+                title={isExternal ? 'External listings cannot be favorited' : undefined}
               >
                 {isFavorited ? '❤️' : '🤍'}
               </button>
@@ -210,6 +251,47 @@ function BusinessDetailPage() {
                   </a>
                 </div>
               )}
+              {business.deliveryOptions && business.deliveryOptions.length > 0 && (
+                <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                  <span>🛵</span>
+                  <div className="flex gap-1" style={{ flexWrap: 'wrap' }}>
+                    {business.deliveryOptions.map((svc) => (
+                      <a
+                        key={svc.name}
+                        href={svc.link || '#'}
+                        onClick={(e) => {
+                          if (!svc.link) e.preventDefault();
+                        }}
+                        target={svc.link ? '_blank' : undefined}
+                        rel="noopener noreferrer"
+                        style={{
+                          background: 'var(--bg-tertiary)',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '999px',
+                          color: 'var(--text-secondary)',
+                          textDecoration: svc.link ? 'underline' : 'none'
+                        }}
+                      >
+                        {svc.name}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Claim Business Link */}
+            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <Link 
+                to={`/business/${id}/claim`}
+                style={{ 
+                  color: 'var(--text-secondary)', 
+                  fontSize: '0.875rem',
+                  textDecoration: 'underline'
+                }}
+              >
+                🏪 Own this business? Claim it
+              </Link>
             </div>
           </div>
         </div>
@@ -246,22 +328,20 @@ function BusinessDetailPage() {
           >
             Reviews ({reviews.length})
           </button>
-          {business.deals && business.deals.length > 0 && (
-            <button
-              onClick={() => setActiveTab('deals')}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'deals' ? '3px solid var(--primary-blue)' : 'none',
-                color: activeTab === 'deals' ? 'var(--primary-blue)' : 'var(--text-secondary)',
-                fontWeight: activeTab === 'deals' ? 'bold' : 'normal',
-                cursor: 'pointer',
-              }}
-            >
-              Deals ({business.deals.length})
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab('deals')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'deals' ? '3px solid var(--primary-blue)' : 'none',
+              color: activeTab === 'deals' ? 'var(--primary-blue)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'deals' ? 'bold' : 'normal',
+              cursor: 'pointer',
+            }}
+          >
+            Deals & Offers {deals.length > 0 && `(${deals.length})`}
+          </button>
         </div>
       </div>
 
@@ -271,57 +351,194 @@ function BusinessDetailPage() {
           <div className="card p-4">
             <h3 className="mb-3">Hours of Operation</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem 2rem' }}>
-              {Object.entries(hours).map(([day, times]) => (
-                <React.Fragment key={day}>
-                  <strong style={{ textTransform: 'capitalize' }}>{day}:</strong>
-                  <span>
-                    {times.open === 'Closed'
-                      ? 'Closed'
-                      : `${times.open} - ${times.close}`}
-                  </span>
-                </React.Fragment>
-              ))}
+              {Object.entries(hours).map(([day, times]) => {
+                // Handle both formats: string (from Google) or object (from database)
+                const displayTime = typeof times === 'string'
+                  ? times
+                  : (times.open === 'Closed' ? 'Closed' : `${times.open} - ${times.close}`);
+
+                return (
+                  <React.Fragment key={day}>
+                    <strong style={{ textTransform: 'capitalize' }}>{day}:</strong>
+                    <span>{displayTime}</span>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         )}
 
         {activeTab === 'reviews' && (
           <div>
-            <div className="mb-4">
-              <ReviewForm businessId={id} onReviewSubmitted={handleReviewSubmitted} />
-            </div>
-            <ReviewList reviews={reviews} onSort={(sortBy) => console.log('Sort by:', sortBy)} />
+            {isExternal ? (
+              <p style={{ color: 'var(--text-secondary)' }}>
+                Reviews are not available for external partner listings.
+              </p>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <ReviewForm businessId={id} onReviewSubmitted={handleReviewSubmitted} />
+                </div>
+                <ReviewList reviews={reviews} onSort={(sortBy) => console.log('Sort by:', sortBy)} />
+              </>
+            )}
           </div>
         )}
 
-        {activeTab === 'deals' && business.deals && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3">
-            {business.deals.map((deal) => (
-              <div key={deal.id} className="card p-3">
-                <h4 className="mb-2">{deal.title}</h4>
-                <p className="mb-2">{deal.description}</p>
-                {deal.discount_code && (
-                  <div className="mb-2">
-                    <strong>Code:</strong>{' '}
-                    <code
+        {activeTab === 'deals' && (
+          <div>
+            {/* Delivery Service Links */}
+            {deliveryLinks.length > 0 && (
+              <div className="card p-4 mb-4">
+                <h3 className="mb-3">🛵 Order Online</h3>
+                <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+                  {deliveryLinks.map((link) => (
+                    <a
+                      key={link.name}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn"
                       style={{
                         background: 'var(--bg-tertiary)',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: 'var(--radius-sm)',
+                        color: 'var(--text-primary)',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1.25rem',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = 'var(--primary-blue)';
+                        e.target.style.color = 'white';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'var(--bg-tertiary)';
+                        e.target.style.color = 'var(--text-primary)';
                       }}
                     >
-                      {deal.discount_code}
-                    </code>
-                  </div>
-                )}
-                {deal.terms && (
-                  <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                    {deal.terms}
-                  </p>
-                )}
+                      {link.icon} {link.name}
+                      {link.hasDeals && <span style={{ fontSize: '0.75rem', background: 'var(--success-green)', color: 'white', padding: '0.125rem 0.375rem', borderRadius: '999px' }}>Deals</span>}
+                    </a>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Deals Grid */}
+            {dealsLoading ? (
+              <div className="text-center p-4">
+                <div className="spinner" style={{ margin: '0 auto' }}></div>
+                <p className="mt-2">Finding deals for {business.name}...</p>
+              </div>
+            ) : deals.length === 0 ? (
+              <div className="card p-4 text-center">
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  No deals available for this business right now. Check back soon!
+                </p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3">
+                {deals.map((deal) => {
+                  const expirationDate = new Date(deal.expiration_date);
+                  const now = new Date();
+                  const daysRemaining = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
+                  const isExpiringSoon = daysRemaining <= 7 && daysRemaining > 0;
+                  const isExpired = daysRemaining <= 0;
+
+                  return (
+                    <div 
+                      key={deal.id} 
+                      className="card p-4"
+                      style={{
+                        opacity: isExpired ? 0.6 : 1,
+                        border: isExpiringSoon ? '2px solid var(--warning-yellow)' : undefined
+                      }}
+                    >
+                      {/* Deal Header */}
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 style={{ marginBottom: '0.25rem' }}>{deal.title}</h4>
+                        {isExpiringSoon && !isExpired && (
+                          <span style={{
+                            background: 'var(--warning-yellow)',
+                            color: '#333',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold'
+                          }}>
+                            ⏰ {daysRemaining}d left
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Provider Badge */}
+                      {deal.provider && (
+                        <div className="mb-2">
+                          <span style={{
+                            background: 'var(--bg-tertiary)',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '999px',
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)'
+                          }}>
+                            {deal.service_icon || '🎫'} {deal.provider}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Description */}
+                      <p className="mb-3" style={{ color: 'var(--text-secondary)' }}>
+                        {deal.description}
+                      </p>
+
+                      {/* Terms */}
+                      {deal.terms && (
+                        <p className="text-sm mb-3" style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                          {deal.terms}
+                        </p>
+                      )}
+
+                      {/* Action Button */}
+                      {deal.service_link ? (
+                        <a
+                          href={deal.service_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary"
+                          style={{ 
+                            width: '100%', 
+                            textDecoration: 'none', 
+                            textAlign: 'center',
+                            display: 'block'
+                          }}
+                        >
+                          Get Deal on {deal.provider} →
+                        </a>
+                      ) : (
+                        <div style={{
+                          background: 'var(--bg-tertiary)',
+                          padding: '0.75rem',
+                          borderRadius: 'var(--radius-md)',
+                          textAlign: 'center'
+                        }}>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                            Available In-Store
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Business Pairings - Complementary businesses nearby */}
+        {business && business.latitude && business.longitude && (
+          <BusinessPairings business={business} />
         )}
       </div>
     </div>

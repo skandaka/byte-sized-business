@@ -1,0 +1,14 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "pkill": true,
+        "/^node server\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^pkill -f \"node\\.\\*server\" 2>/dev/null; sleep 1 && node server\\.js &$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm start": true
+    }
+}

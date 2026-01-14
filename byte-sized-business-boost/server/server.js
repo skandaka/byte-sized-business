@@ -17,10 +17,14 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Import feature flags middleware
+const { featureFlagMiddleware } = require('./services/featureFlags');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(featureFlagMiddleware);
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -35,6 +39,10 @@ const authRoutes = require('./routes/auth');
 const favoriteRoutes = require('./routes/favorites');
 const dealRoutes = require('./routes/deals');
 const analyticsRoutes = require('./routes/analytics');
+const proxyRoutes = require('./routes/proxy');
+const externalRoutes = require('./routes/external');
+const featureFlagRoutes = require('./routes/featureFlags');
+const imageProxyRoutes = require('./routes/imageProxy');
 
 // API Routes
 app.use('/api/businesses', businessRoutes);
@@ -43,6 +51,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/deals', dealRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/proxy', proxyRoutes);
+app.use('/api/external', externalRoutes);
+app.use('/api/feature-flags', featureFlagRoutes);
+app.use('/api/images', imageProxyRoutes);
 
 // Root route
 app.get('/', (req, res) => {

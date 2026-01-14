@@ -22,11 +22,12 @@ export function useTheme() {
 
 /**
  * Theme Provider Component
- * Manages dark/light mode toggle
+ * Manages dark/light mode toggle and high-contrast mode
  */
 export function ThemeProvider({ children }) {
   // Initialize from localStorage or default to light mode
   const [darkMode, setDarkMode] = useLocalStorage('darkMode', false);
+  const [highContrast, setHighContrast] = useLocalStorage('highContrast', false);
 
   // Apply theme class to body element
   useEffect(() => {
@@ -37,13 +38,26 @@ export function ThemeProvider({ children }) {
       document.body.classList.add('light-mode');
       document.body.classList.remove('dark-mode');
     }
-  }, [darkMode]);
+
+    if (highContrast) {
+      document.body.classList.add('high-contrast');
+    } else {
+      document.body.classList.remove('high-contrast');
+    }
+  }, [darkMode, highContrast]);
 
   /**
    * Toggle between dark and light mode
    */
   const toggleDarkMode = () => {
     setDarkMode((prev) => !prev);
+  };
+
+  /**
+   * Toggle high-contrast mode
+   */
+  const toggleHighContrast = () => {
+    setHighContrast((prev) => !prev);
   };
 
   /**
@@ -58,6 +72,8 @@ export function ThemeProvider({ children }) {
     darkMode,
     toggleDarkMode,
     setTheme,
+    highContrast,
+    toggleHighContrast,
   };
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -29,15 +29,20 @@ api.interceptors.request.use((config) => {
 
 /**
  * Fetch all businesses with optional filters
- * @param {Object} filters - Filter options (category, minRating, search, sort)
+ * @param {Object} filters - Filter options (category, minRating, search, sort, lat, lng, radius)
+ * @param {boolean} includeExternal - Whether to blend mocked external providers
  * @returns {Promise<Array>} Array of business objects
  */
-export const getBusinesses = async (filters = {}) => {
+export const getBusinesses = async (filters = {}, includeExternal = false) => {
   const params = new URLSearchParams();
   if (filters.category && filters.category !== 'All') params.append('category', filters.category);
   if (filters.minRating) params.append('minRating', filters.minRating);
   if (filters.search) params.append('search', filters.search);
   if (filters.sort) params.append('sort', filters.sort);
+  if (filters.lat) params.append('lat', filters.lat);
+  if (filters.lng) params.append('lng', filters.lng);
+  if (filters.radius) params.append('radius', filters.radius);
+  if (includeExternal) params.append('external', 'true');
 
   const response = await api.get(`/businesses?${params.toString()}`);
   return response.data;
@@ -60,6 +65,24 @@ export const getBusinessById = async (id) => {
  */
 export const createBusiness = async (businessData) => {
   const response = await api.post('/businesses', businessData);
+  return response.data;
+};
+
+/**
+ * Get business pairings (complementary businesses nearby)
+ * @param {string} businessId - Business ID
+ * @param {Object} params - Query parameters (lat, lng, radius)
+ * @returns {Promise<Object>} Pairing suggestions
+ */
+export const getBusinessPairings = async (businessId, params = {}) => {
+  const queryParams = new URLSearchParams();
+  if (params.lat) queryParams.append('lat', params.lat);
+  if (params.lng) queryParams.append('lng', params.lng);
+  if (params.radius) queryParams.append('radius', params.radius);
+  if (params.name) queryParams.append('name', params.name);
+  if (params.category) queryParams.append('category', params.category);
+
+  const response = await api.get(`/businesses/${businessId}/pairings?${queryParams.toString()}`);
   return response.data;
 };
 
@@ -221,19 +244,33 @@ export const exportFavorites = async (userId) => {
  * @param {string} category - Category filter
  * @returns {Promise<Array>} Array of deal objects
  */
-export const getDeals = async (category = null) => {
-  const params = category && category !== 'All' ? `?category=${category}` : '';
-  const response = await api.get(`/deals${params}`);
+export const getDeals = async (category = null, lat = null, lng = null, radius = 10) => {
+  const params = new URLSearchParams();
+  if (category && category !== 'All') params.append('category', category);
+  if (lat) params.append('lat', lat);
+  if (lng) params.append('lng', lng);
+  if (radius) params.append('radius', radius);
+  
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const response = await api.get(`/deals${queryString}`);
   return response.data;
 };
 
 /**
  * Get deals for specific business
  * @param {string} businessId - Business ID
- * @returns {Promise<Array>} Array of deals
+ * @param {Object} businessInfo - Optional business info for smart deal generation
+ * @returns {Promise<Object>} Object with deals array and delivery links
  */
-export const getBusinessDeals = async (businessId) => {
-  const response = await api.get(`/deals/business/${businessId}`);
+export const getBusinessDeals = async (businessId, businessInfo = {}) => {
+  const params = new URLSearchParams();
+  if (businessInfo.name) params.append('name', businessInfo.name);
+  if (businessInfo.category) params.append('category', businessInfo.category);
+  if (businessInfo.description) params.append('description', businessInfo.description);
+  if (businessInfo.address) params.append('address', businessInfo.address);
+  
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const response = await api.get(`/deals/business/${businessId}${queryString}`);
   return response.data;
 };
 

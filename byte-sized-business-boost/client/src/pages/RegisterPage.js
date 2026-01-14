@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 
 function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -92,6 +93,7 @@ function RegisterPage() {
               placeholder="johndoe"
               required
               minLength={3}
+              autoFocus
             />
           </div>
 
@@ -123,9 +125,7 @@ function RegisterPage() {
               placeholder="••••••••"
               required
             />
-            <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Must be 8+ characters with 1 uppercase and 1 number
-            </p>
+            <PasswordStrengthMeter password={password} />
           </div>
 
           <div className="mb-3">

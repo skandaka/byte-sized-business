@@ -13,6 +13,8 @@ function DealCard({ deal }) {
   const [timeRemaining, setTimeRemaining] = useState('');
   const [showVerification, setShowVerification] = useState(false);
   const [claimed, setClaimed] = useState(false);
+  const [claimCount, setClaimCount] = useState(deal.claim_count || 0);
+  const isExternal = deal.is_external;
 
   // Calculate time remaining
   useEffect(() => {
@@ -47,6 +49,13 @@ function DealCard({ deal }) {
   }, [deal.expiration_date]);
 
   const handleClaimClick = () => {
+    if (isExternal) {
+      if (deal.service_link) {
+        window.open(deal.service_link, '_blank', 'noopener');
+      }
+      return;
+    }
+
     if (!user) {
       alert('Please log in to claim deals');
       return;
@@ -58,6 +67,7 @@ function DealCard({ deal }) {
     try {
       const result = await claimDeal(deal.id, user.id, 'verified_' + Date.now());
       setClaimed(true);
+      setClaimCount(result.claim_count || claimCount + 1);
       alert(`Deal claimed! Your code: ${result.deal.discount_code}`);
     } catch (error) {
       console.error('Error claiming deal:', error);
@@ -79,7 +89,14 @@ function DealCard({ deal }) {
       >
         {/* Deal Header */}
         <div className="flex justify-between items-start mb-2">
-          <h4>{deal.title}</h4>
+          <div>
+            <h4 style={{ marginBottom: '0.25rem' }}>{deal.title}</h4>
+            {deal.provider && (
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {deal.provider}
+              </span>
+            )}
+          </div>
           {isExpiringSoon && !isExpired && (
             <span
               style={{
@@ -117,6 +134,26 @@ function DealCard({ deal }) {
           </p>
         )}
 
+        {/* Delivery services */}
+        {deal.delivery_services && deal.delivery_services.length > 0 && (
+          <div className="flex gap-1 mb-2" style={{ flexWrap: 'wrap' }}>
+            {deal.delivery_services.map((svc) => (
+              <span
+                key={svc}
+                className="text-sm"
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '999px',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                {svc}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Description */}
         <p className="mb-3">{deal.description}</p>
 
@@ -151,6 +188,23 @@ function DealCard({ deal }) {
           </p>
         )}
 
+        {/* Social Proof - Claim Counter */}
+        {claimCount > 0 && (
+          <div
+            className="mb-3"
+            style={{
+              background: 'var(--bg-tertiary)',
+              padding: '0.5rem 0.75rem',
+              borderRadius: 'var(--radius-md)',
+              textAlign: 'center',
+              fontSize: '0.875rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            👥 <strong>{claimCount}</strong> {claimCount === 1 ? 'person has' : 'people have'} claimed this deal
+          </div>
+        )}
+
         {/* Claim Button */}
         <button
           onClick={handleClaimClick}
@@ -158,16 +212,26 @@ function DealCard({ deal }) {
           style={{ width: '100%' }}
           disabled={isExpired || claimed}
         >
-          {claimed ? '✓ Claimed' : isExpired ? 'Expired' : 'Claim Deal'}
+          {isExternal
+            ? deal.provider
+              ? `View on ${deal.provider}`
+              : 'View Partner Deal'
+            : claimed
+              ? '✓ Claimed'
+              : isExpired
+                ? 'Expired'
+                : 'Claim Deal'}
         </button>
       </div>
 
       {/* Verification Modal */}
-      <VerificationModal
-        isOpen={showVerification}
-        onClose={() => setShowVerification(false)}
-        onVerify={handleVerificationSuccess}
-      />
+      {!isExternal && (
+        <VerificationModal
+          isOpen={showVerification}
+          onClose={() => setShowVerification(false)}
+          onVerify={handleVerificationSuccess}
+        />
+      )}
     </>
   );
 }

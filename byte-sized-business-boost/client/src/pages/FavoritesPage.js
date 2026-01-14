@@ -8,6 +8,8 @@ import { Link } from 'react-router-dom';
 import { getFavorites, removeFavorite } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import StarRating from '../components/StarRating';
+import EmptyState from '../components/EmptyState';
+import SafeImage from '../components/SafeImage';
 
 function FavoritesPage() {
   const { user } = useAuth();
@@ -61,15 +63,13 @@ function FavoritesPage() {
       </p>
 
       {favorites.length === 0 ? (
-        <div className="card p-4 text-center">
-          <h3>No Favorites Yet</h3>
-          <p className="mt-2 mb-3" style={{ color: 'var(--text-secondary)' }}>
-            Start exploring businesses and save your favorites!
-          </p>
-          <Link to="/" className="btn btn-primary">
-            Discover Businesses
-          </Link>
-        </div>
+        <EmptyState
+          icon="🤍"
+          title="Your favorites list is empty"
+          message="Discover local gems and save them here for quick access later. Click the heart icon on any business to add it to your favorites!"
+          actionText="Explore Businesses"
+          actionLink="/"
+        />
       ) : (
         <>
           <p className="mb-3" style={{ color: 'var(--text-secondary)' }}>
@@ -79,16 +79,13 @@ function FavoritesPage() {
             {favorites.map((business) => (
               <div key={business.id} className="card p-3">
                 <Link to={`/business/${business.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '200px',
-                      background: `url(${business.image_url}) center/cover`,
-                      borderRadius: 'var(--radius-md)',
-                      marginBottom: '1rem',
-                    }}
-                    role="img"
-                    aria-label={business.name}
+                  <SafeImage
+                    src={business.image_url}
+                    alt={business.name}
+                    category={business.category}
+                    businessName={business.name}
+                    height={200}
+                    style={{ marginBottom: '1rem' }}
                   />
                   <h3>{business.name}</h3>
                   <span
