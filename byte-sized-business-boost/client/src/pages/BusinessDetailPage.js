@@ -94,11 +94,6 @@ function BusinessDetailPage() {
   };
 
   const handleFavoriteToggle = async () => {
-    if (isExternal) {
-      alert('External listings cannot be favorited.');
-      return;
-    }
-
     if (!user) {
       alert('Please log in to save favorites');
       return;
@@ -109,7 +104,8 @@ function BusinessDetailPage() {
         await removeFavorite(user.id, id);
         setIsFavorited(false);
       } else {
-        await addFavorite(user.id, id);
+        // Pass business data for external businesses so they can be stored
+        await addFavorite(user.id, id, business);
         setIsFavorited(true);
       }
     } catch (error) {
@@ -195,13 +191,10 @@ function BusinessDetailPage() {
                 style={{
                   background: isFavorited ? 'var(--error-red)' : 'var(--bg-tertiary)',
                   color: isFavorited ? 'white' : 'var(--text-primary)',
-                  fontSize: '1.5rem',
-                  opacity: isExternal ? 0.6 : 1,
-                  cursor: isExternal ? 'not-allowed' : 'pointer'
+                  fontSize: '1.5rem'
                 }}
                 aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                disabled={isExternal}
-                title={isExternal ? 'External listings cannot be favorited' : undefined}
+                title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
               >
                 {isFavorited ? '❤️' : '🤍'}
               </button>
@@ -422,18 +415,10 @@ function BusinessDetailPage() {
 
         {activeTab === 'reviews' && (
           <div>
-            {isExternal ? (
-              <p style={{ color: 'var(--text-secondary)' }}>
-                Reviews are not available for external partner listings.
-              </p>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <ReviewForm businessId={id} onReviewSubmitted={handleReviewSubmitted} />
-                </div>
-                <ReviewList reviews={reviews} onSort={(sortBy) => console.log('Sort by:', sortBy)} />
-              </>
-            )}
+            <div className="mb-4">
+              <ReviewForm businessId={id} onReviewSubmitted={handleReviewSubmitted} />
+            </div>
+            <ReviewList reviews={reviews} onSort={(sortBy) => console.log('Sort by:', sortBy)} />
           </div>
         )}
 

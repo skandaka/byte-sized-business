@@ -1,10 +1,12 @@
 /**
  * Live Business Search Service
  * Dynamically fetches businesses from Google Places API based on user location
+ * Now with SMART SEARCH - expands queries to related cuisines, synonyms, and types
  */
 
 const axios = require('axios');
 const { filterLocalBusinesses, getLocalBusinessQueries } = require('./intelligentLocalFilter');
+const { expandSearchQuery, filterBySmartSearch } = require('./smartSearch');
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const PLACES_API_URL = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
@@ -13,13 +15,15 @@ const TEXT_SEARCH_URL = 'https://maps.googleapis.com/maps/api/place/textsearch/j
 /**
  * Search for LOCAL, SMALL businesses near a location
  * Uses intelligent filtering to exclude chains/hotels/corporate
+ * NEW: Uses SMART SEARCH to expand queries (pizza → Italian restaurants, etc.)
  * @param {number} lat - Latitude
  * @param {number} lng - Longitude
  * @param {number} radiusMiles - Radius in miles
  * @param {string} category - Our category filter (optional)
+ * @param {string} searchQuery - User search query (optional)
  * @returns {Promise<Array>} Array of LOCAL businesses only
  */
-async function searchLiveBusinesses(lat, lng, radiusMiles = 10, category = null) {
+async function searchLiveBusinesses(lat, lng, radiusMiles = 10, category = null, searchQuery = null) {
   if (!GOOGLE_PLACES_API_KEY) {
     console.warn('⚠️  Google Places API key not configured');
     return [];
@@ -28,10 +32,25 @@ async function searchLiveBusinesses(lat, lng, radiusMiles = 10, category = null)
   try {
     const radiusMeters = Math.min(radiusMiles * 1609.34, 50000);
 
-    console.log(`🔍 Searching LOCAL businesses: ${lat},${lng} radius=${radiusMiles}mi`);
+    // Use SMART SEARCH to expand user query into related terms
+    let searchQueries;
+    let smartSearchData = null;
+    
+    if (searchQuery) {
+      smartSearchData = expandSearchQuery(searchQuery);
+      searchQueries = smartSearchData.googleQueries;
+      
+      console.log(`🧠 Smart Search: "${searchQuery}" → [${smartSearchData.expanded.slice(0, 5).join(', ')}]`);
+      console.log(`   Google queries: ${searchQueries.join(' | ')}`);
+      
+      if (smartSearchData.corrected) {
+        console.log(`   ✓ Spell-corrected: "${smartSearchData.original}" → "${smartSearchData.corrected}"`);
+      }
+    } else {
+      searchQueries = getSmartSearchQueries(category);
+    }
 
-    // Strategy: Use text search with local-specific queries
-    const searchQueries = getSmartSearchQueries(category);
+    console.log(`🔍 Searching LOCAL businesses: ${lat},${lng} radius=${radiusMiles}mi`);
     const allResults = [];
 
     for (const query of searchQueries) {
@@ -77,7 +96,24 @@ async function searchLiveBusinesses(lat, lng, radiusMiles = 10, category = null)
     const businesses = uniquePlaces.map(place => transformToOurFormat(place, lat, lng));
 
     // APPLY INTELLIGENT LOCAL FILTER
-    const localBusinesses = filterLocalBusinesses(businesses);
+    let localBusinesses = filterLocalBusinesses(businesses);
+
+    // If user provided a search query, use SMART SEARCH to rank and filter results
+    if (searchQuery && searchQuery.trim() && smartSearchData) {
+      // Use smart search to filter and rank by relevance
+      localBusinesses = filterBySmartSearch(localBusinesses, searchQuery);
+      console.log(`   ✓ Smart search matched ${localBusinesses.length} businesses`);
+      
+      // If smart search found nothing, do a more lenient expanded term search
+      if (localBusinesses.length === 0) {
+        const expandedTerms = smartSearchData.expanded;
+        localBusinesses = filterLocalBusinesses(businesses).filter(b => {
+          const combined = `${b.name} ${b.description} ${b.category}`.toLowerCase();
+          return expandedTerms.some(term => combined.includes(term));
+        });
+        console.log(`   ✓ Fallback expanded search matched ${localBusinesses.length} businesses`);
+      }
+    }
 
     console.log(`   ✓ Filtered to ${localBusinesses.length} LOCAL businesses`);
     console.log(`   Sample: ${localBusinesses.slice(0, 3).map(b => b.name).join(', ')}`);

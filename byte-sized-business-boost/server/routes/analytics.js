@@ -211,7 +211,9 @@ router.get('/user/:userId', (req, res) => {
 
   const queries = {
     reviewCount: 'SELECT COUNT(*) as count FROM reviews WHERE user_id = ?',
-    favoriteCount: 'SELECT COUNT(*) as count FROM favorites WHERE user_id = ?',
+    // Count favorites from BOTH local and external favorites tables
+    localFavoriteCount: 'SELECT COUNT(*) as count FROM favorites WHERE user_id = ?',
+    externalFavoriteCount: 'SELECT COUNT(*) as count FROM external_favorites WHERE user_id = ?',
     averageRating: 'SELECT AVG(rating) as average FROM reviews WHERE user_id = ?',
     categoryPreferences: `
       SELECT b.category, COUNT(*) as count
@@ -228,16 +230,22 @@ router.get('/user/:userId', (req, res) => {
   db.get(queries.reviewCount, [userId], (err, row) => {
     results.reviewCount = row ? row.count : 0;
 
-    db.get(queries.favoriteCount, [userId], (err, row) => {
-      results.favoriteCount = row ? row.count : 0;
+    db.get(queries.localFavoriteCount, [userId], (err, row) => {
+      const localCount = row ? row.count : 0;
 
-      db.get(queries.averageRating, [userId], (err, row) => {
-        results.averageRatingGiven = row && row.average ? parseFloat(row.average.toFixed(2)) : 0;
+      // Also count external favorites
+      db.get(queries.externalFavoriteCount, [userId], (err, row) => {
+        const externalCount = row ? row.count : 0;
+        results.favoriteCount = localCount + externalCount;
 
-        db.all(queries.categoryPreferences, [userId], (err, rows) => {
-          results.categoryPreferences = rows || [];
+        db.get(queries.averageRating, [userId], (err, row) => {
+          results.averageRatingGiven = row && row.average ? parseFloat(row.average.toFixed(2)) : 0;
 
-          res.json(results);
+          db.all(queries.categoryPreferences, [userId], (err, rows) => {
+            results.categoryPreferences = rows || [];
+
+            res.json(results);
+          });
         });
       });
     });

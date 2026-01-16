@@ -33,7 +33,8 @@ router.get('/', async (req, res) => {
         parseFloat(lat),
         parseFloat(lng),
         parseFloat(radius) || 10,
-        category
+        category,
+        search  // Pass search query to filter results
       );
 
       // Only use live results if we actually got some businesses

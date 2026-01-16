@@ -67,6 +67,7 @@ function HomePage() {
           onChange={setSearchQuery}
           resultCount={businesses.length}
           isSearching={loading}
+          onCategoryReset={() => setSelectedCategory('All')}
         />
       </section>
 

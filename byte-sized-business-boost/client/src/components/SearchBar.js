@@ -14,7 +14,7 @@ const PLACEHOLDER_SUGGESTIONS = [
   'Search for entertainment venues...',
 ];
 
-function SearchBar({ value, onChange, onSearch, resultCount, isSearching }) {
+function SearchBar({ value, onChange, onSearch, resultCount, isSearching, onCategoryReset }) {
   const [placeholder, setPlaceholder] = useState(PLACEHOLDER_SUGGESTIONS[0]);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -57,6 +57,10 @@ function SearchBar({ value, onChange, onSearch, resultCount, isSearching }) {
 
   const handleInputChange = (e) => {
     onChange(e.target.value);
+    // Reset category to 'All' when searching to avoid inconsistency
+    if (onCategoryReset && e.target.value.trim()) {
+      onCategoryReset();
+    }
   };
 
   const handleKeyPress = (e) => {

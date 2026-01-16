@@ -14,7 +14,6 @@
  */
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 
 function HelpPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -203,7 +202,7 @@ function HelpPage() {
             style={{ 
               width: '100%',
               padding: '1rem',
-              fontSize: '1rem',
+              fontSize: '1.125rem',
               border: 'none',
               borderRadius: 'var(--radius-lg)'
             }}
@@ -212,29 +211,9 @@ function HelpPage() {
         </div>
       </div>
 
-      {/* Quick Links */}
-      <div className="grid sm:grid-cols-4 mb-4">
-        <Link to="/" className="card p-3 text-center" style={{ textDecoration: 'none' }}>
-          <span style={{ fontSize: '2rem' }}>🏠</span>
-          <p className="mt-2" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Browse Businesses</p>
-        </Link>
-        <Link to="/deals" className="card p-3 text-center" style={{ textDecoration: 'none' }}>
-          <span style={{ fontSize: '2rem' }}>🎁</span>
-          <p className="mt-2" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>View Deals</p>
-        </Link>
-        <Link to="/favorites" className="card p-3 text-center" style={{ textDecoration: 'none' }}>
-          <span style={{ fontSize: '2rem' }}>❤️</span>
-          <p className="mt-2" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>My Favorites</p>
-        </Link>
-        <Link to="/discover" className="card p-3 text-center" style={{ textDecoration: 'none' }}>
-          <span style={{ fontSize: '2rem' }}>🎲</span>
-          <p className="mt-2" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Random Discovery</p>
-        </Link>
-      </div>
-
       {/* Help Sections */}
       <div className="mb-4">
-        <h2 className="mb-3">📖 User Guide</h2>
+        <h2 className="mb-3" style={{ fontSize: '1.75rem' }}>User Guide</h2>
         {filteredSections.map(section => (
           <div key={section.id} className="card mb-3" style={{ overflow: 'hidden' }}>
             <button
@@ -249,7 +228,7 @@ function HelpPage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                fontSize: '1.1rem',
+                fontSize: '1.25rem',
                 fontWeight: 600,
                 transition: 'all 0.2s'
               }}
@@ -276,10 +255,10 @@ function HelpPage() {
                       borderBottom: index < section.content.length - 1 ? '1px solid var(--border-color)' : 'none'
                     }}
                   >
-                    <h4 style={{ marginBottom: '0.5rem', color: 'var(--primary-blue)' }}>
+                    <h4 style={{ marginBottom: '0.5rem', color: 'var(--primary-blue)', fontSize: '1.125rem' }}>
                       {item.title}
                     </h4>
-                    <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                    <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0, fontSize: '1.0625rem' }}>
                       {item.description}
                     </p>
                   </div>
@@ -292,10 +271,10 @@ function HelpPage() {
 
       {/* FAQ Section */}
       <div className="mb-4">
-        <h2 className="mb-3">❓ Frequently Asked Questions</h2>
+        <h2 className="mb-3" style={{ fontSize: '1.75rem' }}>Frequently Asked Questions</h2>
         {filteredFAQs.length === 0 ? (
           <div className="card p-4 text-center">
-            <p style={{ color: 'var(--text-secondary)' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.0625rem' }}>
               No matching FAQs found. Try a different search term.
             </p>
           </div>
@@ -315,7 +294,8 @@ function HelpPage() {
                   alignItems: 'center',
                   textAlign: 'left',
                   fontWeight: 500,
-                  color: 'var(--text-primary)'
+                  color: 'var(--text-primary)',
+                  fontSize: '1.0625rem'
                 }}
               >
                 <span>{faq.question}</span>
@@ -333,7 +313,8 @@ function HelpPage() {
                 <div style={{ 
                   padding: '0 1rem 1rem 1rem',
                   color: 'var(--text-secondary)',
-                  lineHeight: 1.6
+                  lineHeight: 1.7,
+                  fontSize: '1.0625rem'
                 }}>
                   {faq.answer}
                 </div>
@@ -343,65 +324,8 @@ function HelpPage() {
         )}
       </div>
 
-      {/* Keyboard Shortcuts */}
-      <div className="card p-4 mb-4">
-        <h3 className="mb-3">⌨️ Keyboard Shortcuts</h3>
-        <div className="grid sm:grid-cols-2" style={{ gap: '0.75rem' }}>
-          {[
-            { keys: '/', action: 'Focus search bar' },
-            { keys: 'Esc', action: 'Close modal/dropdown' },
-            { keys: 'Tab', action: 'Navigate between elements' },
-            { keys: 'Enter', action: 'Activate button/link' },
-          ].map((shortcut, index) => (
-            <div 
-              key={index}
-              className="flex items-center gap-2"
-            >
-              <kbd style={{
-                background: 'var(--bg-tertiary)',
-                padding: '0.25rem 0.5rem',
-                borderRadius: 'var(--radius-sm)',
-                fontFamily: 'monospace',
-                fontSize: '0.875rem',
-                border: '1px solid var(--border-color)'
-              }}>
-                {shortcut.keys}
-              </kbd>
-              <span style={{ color: 'var(--text-secondary)' }}>{shortcut.action}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Contact/Support Section */}
-      <div className="card p-4 mb-4" style={{ 
-        background: 'var(--bg-secondary)',
-        textAlign: 'center'
-      }}>
-        <h3 className="mb-2">Still Need Help?</h3>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-          Can't find what you're looking for? We're here to help!
-        </p>
-        <div className="flex justify-center gap-2" style={{ flexWrap: 'wrap' }}>
-          <a 
-            href="mailto:support@bytesizedbusiness.com"
-            className="btn btn-primary"
-            style={{ textDecoration: 'none' }}
-          >
-            ✉️ Email Support
-          </a>
-          <Link 
-            to="/analytics"
-            className="btn btn-secondary"
-            style={{ textDecoration: 'none' }}
-          >
-            📊 View Platform Stats
-          </Link>
-        </div>
-      </div>
-
       {/* Version Info */}
-      <div className="text-center mb-4" style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
+      <div className="text-center mb-4" style={{ color: 'var(--text-tertiary)', fontSize: '1rem' }}>
         <p>Byte-Sized Business Boost v1.0.0</p>
         <p>FBLA Coding & Programming 2025-2026</p>
       </div>

@@ -196,10 +196,11 @@ export const getFavorites = async (userId) => {
  * Add business to favorites
  * @param {string} userId - User ID
  * @param {string} businessId - Business ID
+ * @param {Object} businessData - Full business data (optional, for external businesses)
  * @returns {Promise<Object>} Success message
  */
-export const addFavorite = async (userId, businessId) => {
-  const response = await api.post('/favorites', { userId, businessId });
+export const addFavorite = async (userId, businessId, businessData = null) => {
+  const response = await api.post('/favorites', { userId, businessId, businessData });
   return response.data;
 };
 
