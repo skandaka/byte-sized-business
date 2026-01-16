@@ -1,6 +1,14 @@
 /**
  * Review Routes
  * Handles review creation, retrieval, and management
+ * FBLA Rubric: "Validation on both syntactical and semantic levels"
+ * 
+ * Features:
+ * - CRUD operations for reviews
+ * - Multiple sort options
+ * - Helpful voting system
+ * - Content validation (syntactical + semantic)
+ * - XSS prevention through sanitization
  */
 
 const express = require('express');
@@ -8,12 +16,17 @@ const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 const { v4: uuidv4 } = require('uuid');
 const { DB_PATH } = require('../database/init');
+const { validateContent, sanitizeContent } = require('../services/contentValidation');
 
 const db = new sqlite3.Database(DB_PATH);
 
 /**
  * GET /api/reviews/:businessId
  * Get all reviews for a specific business
+ * 
+ * @param {string} businessId - The business ID
+ * @query {string} sort - Sort order: 'recent', 'highest', 'lowest', 'helpful'
+ * @returns {Array} Array of review objects
  */
 router.get('/:businessId', (req, res) => {
   const { businessId } = req.params;
@@ -42,36 +55,61 @@ router.get('/:businessId', (req, res) => {
 
 /**
  * POST /api/reviews
- * Create a new review
- * Body: { businessId, userId, username, rating, comment, verificationToken }
+ * Create a new review with comprehensive validation
+ * 
+ * Request body:
+ * @param {string} businessId - Business ID
+ * @param {string} userId - User ID
+ * @param {string} username - Username
+ * @param {number} rating - Star rating (1-5)
+ * @param {string} comment - Review text (max 500 chars)
+ * @param {string} verificationToken - Bot verification token
+ * 
+ * @returns {Object} Created review object
  */
 router.post('/', (req, res) => {
   const { businessId, userId, username, rating, comment, verificationToken } = req.body;
 
-  // Validation
+  // === SYNTACTICAL VALIDATION ===
+  
+  // Required fields check
   if (!businessId || !userId || !username || !rating || !comment) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  // Rating range validation
   if (rating < 1 || rating > 5) {
     return res.status(400).json({ error: 'Rating must be between 1 and 5' });
   }
 
+  // Length validation
   if (comment.length > 500) {
     return res.status(400).json({ error: 'Comment must be 500 characters or less' });
   }
 
+  if (comment.length < 10) {
+    return res.status(400).json({ error: 'Comment must be at least 10 characters' });
+  }
+
+  // Bot verification check
   if (!verificationToken) {
     return res.status(400).json({ error: 'Bot verification required' });
   }
 
+  // === SEMANTIC VALIDATION ===
+  
+  // Validate content quality and appropriateness
+  const validationResult = validateContent(comment, 'review');
+  
+  if (!validationResult.valid) {
+    return res.status(400).json({ 
+      error: validationResult.issues[0] || 'Review content does not meet quality standards',
+      validation: validationResult
+    });
+  }
+
   // Sanitize comment to prevent XSS
-  const sanitizedComment = comment
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+  const sanitizedComment = sanitizeContent(comment);
 
   const id = uuidv4();
 

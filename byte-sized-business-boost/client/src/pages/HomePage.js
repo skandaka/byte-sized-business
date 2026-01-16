@@ -188,15 +188,42 @@ function HomePage() {
                       {business.description.substring(0, 120)}...
                     </p>
 
-                    {/* Rating */}
+                    {/* Rating - Clickable to Google */}
                     <div className="flex items-center gap-1">
-                      <span style={{ color: 'var(--warning-yellow)', fontSize: '1.2rem' }}>
-                        {'⭐'.repeat(Math.round(business.averageRating))}
-                      </span>
-                      <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{business.averageRating}</span>
-                      <span style={{ color: 'var(--text-tertiary)' }}>
-                        ({business.reviewCount} reviews)
-                      </span>
+                      {business.external_id ? (
+                        <a
+                          href={`https://www.google.com/maps/place/?q=place_id:${business.external_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.25rem',
+                            textDecoration: 'none',
+                            color: 'inherit'
+                          }}
+                          title="View on Google Maps"
+                        >
+                          <span style={{ color: 'var(--warning-yellow)', fontSize: '1.2rem' }}>
+                            {'⭐'.repeat(Math.round(business.averageRating || 0))}
+                          </span>
+                          <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{business.averageRating || 0}</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>
+                            ({business.reviewCount || 0})
+                          </span>
+                        </a>
+                      ) : (
+                        <>
+                          <span style={{ color: 'var(--warning-yellow)', fontSize: '1.2rem' }}>
+                            {'⭐'.repeat(Math.round(business.averageRating || 0))}
+                          </span>
+                          <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{business.averageRating || 0}</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>
+                            ({business.reviewCount || 0} reviews)
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     {/* Address */}

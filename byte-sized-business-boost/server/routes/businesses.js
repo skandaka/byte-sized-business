@@ -26,7 +26,7 @@ const db = new sqlite3.Database(DB_PATH);
 router.get('/', async (req, res) => {
   const { category, minRating, search, sort, external, lat, lng, radius } = req.query;
 
-  // NEW: If location provided, fetch LIVE businesses from Google Places API
+  // NEW: If location provided, try to fetch LIVE businesses from Google Places API
   if (lat && lng) {
     try {
       const liveBusinesses = await searchLiveBusinesses(
@@ -36,27 +36,32 @@ router.get('/', async (req, res) => {
         category
       );
 
-      // Sort businesses
-      let sortedBusinesses = [...liveBusinesses];
-      switch (sort) {
-        case 'highest-rated':
-          sortedBusinesses.sort((a, b) => b.averageRating - a.averageRating);
-          break;
-        case 'most-reviews':
-          sortedBusinesses.sort((a, b) => b.reviewCount - a.reviewCount);
-          break;
-        case 'lowest-rated':
-          sortedBusinesses.sort((a, b) => a.averageRating - b.averageRating);
-          break;
-        case 'a-z':
-          sortedBusinesses.sort((a, b) => a.name.localeCompare(b.name));
-          break;
-        default:
-          // Already sorted by distance from API
-          break;
-      }
+      // Only use live results if we actually got some businesses
+      if (liveBusinesses && liveBusinesses.length > 0) {
+        // Sort businesses
+        let sortedBusinesses = [...liveBusinesses];
+        switch (sort) {
+          case 'highest-rated':
+            sortedBusinesses.sort((a, b) => b.averageRating - a.averageRating);
+            break;
+          case 'most-reviews':
+            sortedBusinesses.sort((a, b) => b.reviewCount - a.reviewCount);
+            break;
+          case 'lowest-rated':
+            sortedBusinesses.sort((a, b) => a.averageRating - b.averageRating);
+            break;
+          case 'a-z':
+            sortedBusinesses.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+          default:
+            // Already sorted by distance from API
+            break;
+        }
 
-      return res.json(sortedBusinesses);
+        return res.json(sortedBusinesses);
+      }
+      // If no live businesses found, fall through to database
+      console.log('⚠️ No live businesses found, falling back to database');
     } catch (error) {
       console.error('Error fetching live businesses:', error);
       // Fall through to database query

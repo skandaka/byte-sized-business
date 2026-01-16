@@ -44,7 +44,7 @@ export function BusinessProvider({ children }) {
     lat: 41.8781,
     lng: -87.6298,
     name: 'Chicago, IL',
-    radius: 10
+    zipCode: '60601',
   });
 
   /**
@@ -62,7 +62,7 @@ export function BusinessProvider({ children }) {
         minRating: minRating > 0 ? minRating : undefined,
         lat: location?.lat,
         lng: location?.lng,
-        radius: location?.radius,
+        radius: 10, // Default 10 mile radius for ZIP code based search
       };
 
       const data = await getBusinesses(filters, includeExternal);

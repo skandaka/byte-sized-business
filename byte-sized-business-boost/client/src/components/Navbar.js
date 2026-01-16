@@ -1,6 +1,7 @@
 /**
  * Navbar Component
  * Main navigation bar with links and dark mode toggle
+ * FBLA Rubric: Clear navigation structure for user experience
  */
 
 import React, { useState } from 'react';
@@ -8,7 +9,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
-function Navbar() {
+/**
+ * Navbar Component
+ * @param {Object} props - Component props
+ * @param {Function} props.onOpenTutorial - Handler to open the tutorial modal
+ */
+function Navbar({ onOpenTutorial }) {
   const { user, logout } = useAuth();
   const { darkMode, toggleDarkMode, highContrast, toggleHighContrast } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -64,6 +70,9 @@ function Navbar() {
             <Link to="/discover" style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 500 }}>
               Discover
             </Link>
+            <Link to="/deals" style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 500 }}>
+              Deals
+            </Link>
             <Link to="/map" style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 500 }}>
               Map
             </Link>
@@ -92,6 +101,35 @@ function Navbar() {
                   Sign Up
                 </Link>
               </>
+            )}
+
+            {/* Help Link */}
+            <Link 
+              to="/help" 
+              style={{ 
+                textDecoration: 'none', 
+                color: 'var(--text-primary)', 
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem'
+              }}
+              title="Help & Documentation"
+            >
+              ❓
+            </Link>
+
+            {/* Tutorial button */}
+            {onOpenTutorial && (
+              <button
+                onClick={onOpenTutorial}
+                className="btn btn-secondary"
+                aria-label="Start tutorial"
+                title="Start tutorial walkthrough"
+                style={{ padding: '0.5rem' }}
+              >
+                🎓
+              </button>
             )}
 
             {/* Dark mode toggle */}

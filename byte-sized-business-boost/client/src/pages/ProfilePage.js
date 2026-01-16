@@ -1,17 +1,21 @@
 /**
  * Profile Page
  * User profile with statistics and export functionality (Advanced Feature #11)
+ * FBLA Rubric: "Customizable reports" - PDF and CSV export capabilities
  */
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserReviews, getUserAnalytics, exportFavorites } from '../utils/api';
+import { getUserReviews, getUserAnalytics, exportFavorites, getFavorites } from '../utils/api';
+import { jsPDF } from 'jspdf';
 
 function ProfilePage() {
   const { user } = useAuth();
   const [reviews, setReviews] = useState([]);
+  const [favorites, setFavorites] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -21,12 +25,14 @@ function ProfilePage() {
 
   const fetchUserData = async () => {
     try {
-      const [reviewsData, analyticsData] = await Promise.all([
+      const [reviewsData, analyticsData, favoritesData] = await Promise.all([
         getUserReviews(user.id),
         getUserAnalytics(user.id),
+        getFavorites(user.id),
       ]);
       setReviews(reviewsData);
       setAnalytics(analyticsData);
+      setFavorites(favoritesData);
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
@@ -34,6 +40,10 @@ function ProfilePage() {
     }
   };
 
+  /**
+   * Export favorites as CSV file
+   * Downloads a spreadsheet-compatible file
+   */
   const handleExportFavorites = async () => {
     try {
       const blob = await exportFavorites(user.id);
@@ -49,6 +59,230 @@ function ProfilePage() {
     } catch (error) {
       console.error('Error exporting favorites:', error);
       alert('Failed to export favorites');
+    }
+  };
+
+  /**
+   * Export reviews as PDF file
+   * FBLA Rubric: "Customizable reports"
+   * 
+   * Creates a professional PDF document with:
+   * - User profile information
+   * - Statistics summary
+   * - Complete review history
+   * - Favorites list
+   */
+  const handleExportPDF = async () => {
+    setExporting(true);
+    
+    try {
+      // Create new PDF document
+      const doc = new jsPDF();
+      let yPosition = 20;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // Helper function to add new page if needed
+      const checkPageBreak = (neededSpace = 30) => {
+        if (yPosition + neededSpace > 270) {
+          doc.addPage();
+          yPosition = 20;
+          return true;
+        }
+        return false;
+      };
+
+      // ===== HEADER =====
+      doc.setFillColor(37, 99, 235); // Primary blue
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Byte-Sized Business Boost', pageWidth / 2, 18, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('User Activity Report', pageWidth / 2, 28, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 36, { align: 'center' });
+
+      yPosition = 55;
+      doc.setTextColor(0, 0, 0);
+
+      // ===== USER INFO SECTION =====
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Profile Information', margin, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Username: ${user.username}`, margin, yPosition);
+      yPosition += 7;
+      doc.text(`Email: ${user.email}`, margin, yPosition);
+      yPosition += 7;
+      doc.text(`Account Type: ${user.is_admin ? 'Administrator' : 'Member'}`, margin, yPosition);
+      yPosition += 15;
+
+      // ===== STATISTICS SECTION =====
+      if (analytics) {
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Activity Statistics', margin, yPosition);
+        yPosition += 10;
+
+        // Draw stats boxes
+        doc.setFillColor(240, 240, 240);
+        const boxWidth = (contentWidth - 20) / 3;
+        
+        // Reviews box
+        doc.roundedRect(margin, yPosition, boxWidth, 25, 3, 3, 'F');
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(37, 99, 235);
+        doc.text(String(analytics.reviewCount || 0), margin + boxWidth/2, yPosition + 12, { align: 'center' });
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Reviews Written', margin + boxWidth/2, yPosition + 20, { align: 'center' });
+
+        // Favorites box
+        doc.setFillColor(240, 240, 240);
+        doc.roundedRect(margin + boxWidth + 10, yPosition, boxWidth, 25, 3, 3, 'F');
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(16, 185, 129);
+        doc.text(String(analytics.favoriteCount || 0), margin + boxWidth + 10 + boxWidth/2, yPosition + 12, { align: 'center' });
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Favorites Saved', margin + boxWidth + 10 + boxWidth/2, yPosition + 20, { align: 'center' });
+
+        // Average rating box
+        doc.setFillColor(240, 240, 240);
+        doc.roundedRect(margin + (boxWidth + 10) * 2, yPosition, boxWidth, 25, 3, 3, 'F');
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(245, 158, 11);
+        const avgRating = analytics.averageRatingGiven ? analytics.averageRatingGiven.toFixed(1) : '0.0';
+        doc.text(avgRating, margin + (boxWidth + 10) * 2 + boxWidth/2, yPosition + 12, { align: 'center' });
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Avg Rating Given', margin + (boxWidth + 10) * 2 + boxWidth/2, yPosition + 20, { align: 'center' });
+
+        yPosition += 40;
+      }
+
+      // ===== REVIEWS SECTION =====
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Review History', margin, yPosition);
+      yPosition += 10;
+
+      if (reviews.length === 0) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text('No reviews written yet.', margin, yPosition);
+        yPosition += 15;
+      } else {
+        reviews.forEach((review, index) => {
+          checkPageBreak(40);
+
+          // Review card background
+          doc.setFillColor(248, 250, 252);
+          doc.roundedRect(margin, yPosition, contentWidth, 35, 3, 3, 'F');
+
+          // Business name and rating
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          doc.text(review.business_name || 'Unknown Business', margin + 5, yPosition + 8);
+
+          // Star rating
+          const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+          doc.setTextColor(245, 158, 11);
+          doc.text(stars, pageWidth - margin - 40, yPosition + 8);
+
+          // Category and date
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`${review.category || 'General'} • ${new Date(review.created_at).toLocaleDateString()}`, margin + 5, yPosition + 16);
+
+          // Comment (truncated if needed)
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(60, 60, 60);
+          const comment = review.comment.length > 100 ? review.comment.substring(0, 100) + '...' : review.comment;
+          const splitComment = doc.splitTextToSize(comment, contentWidth - 10);
+          doc.text(splitComment, margin + 5, yPosition + 24);
+
+          yPosition += 40;
+        });
+      }
+
+      // ===== FAVORITES SECTION =====
+      checkPageBreak(50);
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Favorite Businesses', margin, yPosition);
+      yPosition += 10;
+
+      if (favorites.length === 0) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text('No favorites saved yet.', margin, yPosition);
+        yPosition += 15;
+      } else {
+        favorites.slice(0, 10).forEach((fav, index) => {
+          checkPageBreak(15);
+
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(0, 0, 0);
+          doc.text(`${index + 1}. ${fav.name}`, margin, yPosition);
+          
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`${fav.category} • ${fav.address || 'Address not available'}`, margin + 20, yPosition + 5);
+          
+          yPosition += 12;
+        });
+
+        if (favorites.length > 10) {
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`... and ${favorites.length - 10} more favorites`, margin, yPosition);
+          yPosition += 10;
+        }
+      }
+
+      // ===== FOOTER =====
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+          `Page ${i} of ${pageCount} • Byte-Sized Business Boost • FBLA 2025-2026`,
+          pageWidth / 2,
+          285,
+          { align: 'center' }
+        );
+      }
+
+      // Save the PDF
+      doc.save(`${user.username}-activity-report.pdf`);
+      alert('PDF report exported successfully!');
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -137,8 +371,12 @@ function ProfilePage() {
           <button onClick={handleExportFavorites} className="btn btn-primary">
             📥 Export Favorites (CSV)
           </button>
-          <button className="btn btn-secondary" onClick={() => alert('PDF export coming soon!')}>
-            📄 Export Reviews (PDF)
+          <button 
+            onClick={handleExportPDF} 
+            className="btn btn-secondary"
+            disabled={exporting}
+          >
+            {exporting ? '⏳ Generating...' : '📄 Export Report (PDF)'}
           </button>
         </div>
       </div>

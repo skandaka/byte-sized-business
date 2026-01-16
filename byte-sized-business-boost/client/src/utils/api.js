@@ -6,7 +6,7 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -373,6 +373,74 @@ export const getUserAnalytics = async (userId) => {
  */
 export const getBusinessAnalytics = async (businessId) => {
   const response = await api.get(`/analytics/business/${businessId}`);
+  return response.data;
+};
+
+// ========== Q&A API ==========
+
+/**
+ * Get questions and answers for a business
+ * @param {string} businessId - Business ID
+ * @param {string} sort - Sort order (recent, popular, unanswered)
+ * @returns {Promise<Array>} Array of questions with nested answers
+ */
+export const getQnA = async (businessId, sort = 'recent') => {
+  const response = await api.get(`/qna/${businessId}?sort=${sort}`);
+  return response.data;
+};
+
+/**
+ * Create a new question for a business
+ * @param {Object} questionData - Question data (businessId, userId, username, question)
+ * @returns {Promise<Object>} Created question object
+ */
+export const createQuestion = async (questionData) => {
+  const response = await api.post('/qna/question', questionData);
+  return response.data;
+};
+
+/**
+ * Create a new answer for a question
+ * @param {Object} answerData - Answer data (questionId, userId, username, answer, isBusinessOwner)
+ * @returns {Promise<Object>} Created answer object
+ */
+export const createAnswer = async (answerData) => {
+  const response = await api.post('/qna/answer', answerData);
+  return response.data;
+};
+
+/**
+ * Upvote an answer
+ * @param {string} answerId - Answer ID
+ * @returns {Promise<Object>} Updated upvote count
+ */
+export const upvoteAnswer = async (answerId) => {
+  const response = await api.put(`/qna/answer/${answerId}/upvote`);
+  return response.data;
+};
+
+/**
+ * Delete a question (owner only)
+ * @param {string} questionId - Question ID
+ * @param {string} userId - User ID for authorization
+ * @returns {Promise<Object>} Success message
+ */
+export const deleteQuestion = async (questionId, userId) => {
+  const response = await api.delete(`/qna/question/${questionId}`, { data: { userId } });
+  return response.data;
+};
+
+// ========== CONTENT VALIDATION API ==========
+
+/**
+ * Validate content before submission
+ * Performs semantic-level validation on user input
+ * @param {string} content - Text content to validate
+ * @param {string} type - Content type (review, question, answer)
+ * @returns {Promise<Object>} Validation result { valid, message, suggestions }
+ */
+export const validateContent = async (content, type = 'general') => {
+  const response = await api.post('/validate', { content, type });
   return response.data;
 };
 

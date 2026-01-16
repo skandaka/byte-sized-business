@@ -43,6 +43,8 @@ const proxyRoutes = require('./routes/proxy');
 const externalRoutes = require('./routes/external');
 const featureFlagRoutes = require('./routes/featureFlags');
 const imageProxyRoutes = require('./routes/imageProxy');
+const qnaRoutes = require('./routes/qna');
+const validationRoutes = require('./routes/validation');
 
 // API Routes
 app.use('/api/businesses', businessRoutes);
@@ -55,6 +57,8 @@ app.use('/api/proxy', proxyRoutes);
 app.use('/api/external', externalRoutes);
 app.use('/api/feature-flags', featureFlagRoutes);
 app.use('/api/images', imageProxyRoutes);
+app.use('/api/qna', qnaRoutes);
+app.use('/api/validate', validationRoutes);
 
 // Root route
 app.get('/', (req, res) => {

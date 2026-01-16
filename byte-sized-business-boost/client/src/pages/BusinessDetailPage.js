@@ -1,6 +1,7 @@
 /**
  * Business Detail Page
  * Shows detailed information about a single business with reviews
+ * FBLA Rubric: Full business information, reviews, deals, and Q&A
  */
 
 import React, { useState, useEffect } from 'react';
@@ -12,6 +13,7 @@ import ReviewList from '../components/ReviewList';
 import ReviewForm from '../components/ReviewForm';
 import SafeImage from '../components/SafeImage';
 import BusinessPairings from '../components/BusinessPairings';
+import QASection from '../components/QASection';
 
 function BusinessDetailPage() {
   const { id } = useParams();
@@ -205,15 +207,51 @@ function BusinessDetailPage() {
               </button>
             </div>
 
-            {/* Rating */}
+            {/* Rating - Clickable link to Google */}
             <div className="flex items-center gap-2 mb-3">
-              <StarRating rating={business.averageRating} readonly size="medium" />
-              <span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
-                {business.averageRating}
-              </span>
-              <span style={{ color: 'var(--text-tertiary)' }}>
-                ({business.reviewCount} {business.reviewCount === 1 ? 'review' : 'reviews'})
-              </span>
+              {business.external_id ? (
+                <a
+                  href={`https://www.google.com/maps/place/?q=place_id:${business.external_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem',
+                    textDecoration: 'none',
+                    padding: '0.5rem 1rem',
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-md)',
+                    transition: 'all 0.2s'
+                  }}
+                  title="View on Google Maps"
+                >
+                  <StarRating rating={business.averageRating} readonly size="medium" />
+                  <span style={{ fontWeight: 'bold', fontSize: '1.25rem', color: 'var(--text-primary)' }}>
+                    {business.averageRating}
+                  </span>
+                  <span style={{ color: 'var(--text-tertiary)' }}>
+                    ({business.reviewCount} {business.reviewCount === 1 ? 'review' : 'reviews'})
+                  </span>
+                  <span style={{ 
+                    color: 'var(--primary-blue)', 
+                    fontSize: '0.8rem',
+                    marginLeft: '0.5rem'
+                  }}>
+                    View on Google ↗
+                  </span>
+                </a>
+              ) : (
+                <>
+                  <StarRating rating={business.averageRating} readonly size="medium" />
+                  <span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
+                    {business.averageRating}
+                  </span>
+                  <span style={{ color: 'var(--text-tertiary)' }}>
+                    ({business.reviewCount} {business.reviewCount === 1 ? 'review' : 'reviews'})
+                  </span>
+                </>
+              )}
             </div>
 
             <p style={{ marginBottom: '1rem', lineHeight: 1.6 }}>{business.description}</p>
@@ -299,7 +337,7 @@ function BusinessDetailPage() {
 
       {/* Tabs */}
       <div className="mb-3">
-        <div className="flex" style={{ borderBottom: '2px solid var(--border-color)', gap: '1rem' }}>
+        <div className="flex" style={{ borderBottom: '2px solid var(--border-color)', gap: '1rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('about')}
             style={{
@@ -327,6 +365,20 @@ function BusinessDetailPage() {
             }}
           >
             Reviews ({reviews.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('qna')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'qna' ? '3px solid var(--primary-blue)' : 'none',
+              color: activeTab === 'qna' ? 'var(--primary-blue)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'qna' ? 'bold' : 'normal',
+              cursor: 'pointer',
+            }}
+          >
+            Q&A 💬
           </button>
           <button
             onClick={() => setActiveTab('deals')}
@@ -383,6 +435,14 @@ function BusinessDetailPage() {
               </>
             )}
           </div>
+        )}
+
+        {/* Q&A Tab - Interactive Q&A Feature */}
+        {activeTab === 'qna' && (
+          <QASection 
+            businessId={id} 
+            businessName={business.name}
+          />
         )}
 
         {activeTab === 'deals' && (

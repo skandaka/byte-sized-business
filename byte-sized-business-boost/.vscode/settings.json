@@ -9,6 +9,7 @@
             "approve": true,
             "matchCommandLine": true
         },
-        "npm start": true
+        "npm start": true,
+        "sqlite3": true
     }
 }
